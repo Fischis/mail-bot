@@ -1,1 +1,8 @@
 streamlit
+openai
+langchain
+tiktoken
+langchain-openai
+langchain_community
+faiss-cpu
+beautifulsoup4
