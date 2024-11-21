@@ -125,6 +125,8 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = []
 if "search_active" not in st.session_state:
     st.session_state.search_active = False
+if "search_tabs" not in st.session_state:
+    st.session_state.search_tabs = []
 
 # E-Mails abrufen und in FAISS speichern
 #if st.sidebar.button("E-Mails abrufen"):
@@ -175,15 +177,30 @@ if search_query:
             st.error("Bitte erst die E-Mails abrufen und den FAISS-Index erstellen.")
         else:
             # Suche im FAISS-Index durchführen
-            st.session_state.search_results = search_faiss_index(search_query, st.session_state.faiss_index, st.session_state.email_vectors, openai_api_key)
+            search_results = search_faiss_index(search_query, st.session_state.faiss_index, st.session_state.email_vectors, openai_api_key)
+            st.session_state.search_results.append({
+                "query": search_query,
+                "results": search_results
+            })
             st.session_state.search_active = True
     except Exception as e:
         st.error(f"Fehler bei der Suche: {e}")
 
-
+# Tabs für Suchergebnisse erstellen
 if st.session_state.search_active:
-    show_search_results_dialog()
+    tab_titles = [f"🔍 {result['query'][:10]}..." for result in st.session_state.search_results]
+    tabs = st.tabs(tab_titles)
+    for tab, result in zip(tabs, st.session_state.search_results):
+        with tab:
+            st.markdown("### 🔍 Suchergebnisse")
+            for i, email_data in enumerate(result["results"]):
+                with st.container():
+                    st.markdown(f"**Betreff:** {email_data['subject']}")
+                    st.markdown(f"**Von:** {email_data['sender']}")
+                    if st.button("Anzeigen", key=f"search_email_{i}_{result['query']}"):
+                        st.session_state.selected_email = email_data
+                    st.markdown("---")
 
 # Overlay mit E-Mail-Details
 if st.session_state.selected_email:
-    show_email_details()
+    show_email_details(st.session_state.selected_email)
