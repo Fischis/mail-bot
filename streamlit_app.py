@@ -3,6 +3,7 @@ import openai
 import numpy as np
 from utils.fetch_emails import fetch_emails
 from utils.summarize_emails import summarize_email
+from utils.summarize_emails import llm_query_answer
 from utils.faiss_utils import generate_faiss_index, search_faiss_index
 
 # App Titel
@@ -165,11 +166,13 @@ def handle_search(query):
                 st.session_state.email_vectors,
                 st.session_state.openai_api_key
             )
+            llm_search_summary = llm_query_answer (query, search_results, st.session_state.openai_api_key)
             
             if search_results:
                 st.session_state.search_results.append({
                     "query": query,
-                    "results": search_results
+                    "results": search_results,
+                    "llm_summary": llm_search_summary
                 })
                 st.session_state.search_active = True
                 st.session_state.last_search_query = query
@@ -178,6 +181,11 @@ def handle_search(query):
             st.error(f"Fehler bei der Suche: {e}")
     return False
 
+def remove_search_tab(index):
+    st.session_state.search_results.pop(index)
+    if not st.session_state.search_results:
+        st.session_state.search_active = False
+    st.rerun()
 
 # Search functionality in sidebar
 search_query = st.sidebar.text_input("🔍 Suche in E-Mails")
@@ -188,10 +196,14 @@ if search_button and search_query:
         st.rerun()
 
 
-# Create main tabs
+
+# Create main tabs with close buttons for search tabs
 tab_titles = ["📧 E-Mails"]
 if st.session_state.search_active and st.session_state.search_results:
-    tab_titles.extend([f"🔍 {result['query'][:10]}..." for result in st.session_state.search_results])
+    # Create columns for each search tab to include close button
+    for result in st.session_state.search_results:
+        tab_title = f"🔍 {result['query'][:10]}..."
+        tab_titles.append(tab_title)
 
 tabs = st.tabs(tab_titles)
 
@@ -217,5 +229,12 @@ with tabs[0]:
 if st.session_state.search_active and st.session_state.search_results:
     for tab_idx, (tab, result) in enumerate(zip(tabs[1:], st.session_state.search_results), 1):
         with tab:
+            # Add close button at the top of each search tab
+            col1, col2 = st.columns([20, 1])
+            with col2:
+                if st.button("✖️", key=f"close_tab_{tab_idx}", help="Tab schließen"):
+                    remove_search_tab(tab_idx - 1)
+            
             st.markdown("### 🔍 Suchergebnisse")
+            st.markdown(f"LLM Antwort: {result['llm_summary']}")
             display_email_list(result["results"], f"search_{result['query']}")
