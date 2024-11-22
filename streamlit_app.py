@@ -128,45 +128,47 @@ if "search_active" not in st.session_state:
 if "search_tabs" not in st.session_state:
     st.session_state.search_tabs = []
 
-# E-Mails abrufen und in FAISS speichern
-#if st.sidebar.button("E-Mails abrufen"):
-#    st.session_state.emails = fetch_emails(email_address, email_password, imap_server)
-#    st.session_state.current_page = 0
-#    if st.session_state.emails:
-#        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(st.session_state.emails, openai_api_key)
-#        if st.session_state.faiss_index:
-#            st.success("FAISS-Index erfolgreich erstellt.")
+def toggle_email_details(index):
+    if "details_visible" not in st.session_state:
+        st.session_state.details_visible = -1
+    
+    if st.session_state.details_visible == index:
+        st.session_state.details_visible = -1
+    else:
+        st.session_state.details_visible = index
 
-# Pagination
+
+# E-Mail view and Pagination 
 if st.session_state.emails and not st.session_state.search_active:
     total_pages = (len(st.session_state.emails) + 19) // 20
     current_page_emails = st.session_state.emails[
         st.session_state.current_page * 20 : (st.session_state.current_page + 1) * 20
     ]
-
     for i, email_data in enumerate(current_page_emails):
         with st.container():
             st.markdown(f"**Betreff:** {email_data['subject']}")
             st.markdown(f"**Von:** {email_data['sender']}")
-            button_text = "Details anzeigen" if st.session_state.details_visible != i else "Details ausblenden"
-            if st.button(button_text, key=f"email_{i}"):
-                if st.session_state.details_visible == i:
-                    st.session_state.details_visible = -1
-                else:
-                    st.session_state.details_visible = i
+            
+            # Use a callback function with the button
+            button_text = "Details ausblenden" if st.session_state.details_visible == i else "Details anzeigen"
+            st.button(
+                button_text, 
+                key=f"email_{i}",
+                on_click=toggle_email_details,
+                args=(i,)
+            )
         
             if st.session_state.details_visible == i:
                 show_email_details(email_data)
-
             st.markdown("---")
 
     # Pagination Buttons
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("⬅️ Zurück", disabled=st.session_state.current_page <= 0):
+        if st.button("⬅️ Zurück", disabled=st.session_state.current_page <= 0, key="prev"):
             st.session_state.current_page -= 1
     with col3:
-        if st.button("➡️ Weiter", disabled=st.session_state.current_page >= total_pages - 1):
+        if st.button("➡️ Weiter", disabled=st.session_state.current_page >= total_pages - 1, key="next"):
             st.session_state.current_page += 1
 
 # Sidebar-Suche hinzufügen
@@ -202,5 +204,5 @@ if st.session_state.search_active:
                     st.markdown("---")
 
 # Overlay mit E-Mail-Details
-if st.session_state.selected_email:
-    show_email_details(st.session_state.selected_email)
+#if st.session_state.selected_email:
+#    show_email_details(st.session_state.selected_email)
