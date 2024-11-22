@@ -31,7 +31,10 @@ def fetch_emails(email_address, email_password, imap_server, page=0, page_size=2
                     msg = email.message_from_bytes(response_part[1])
                     subject = decode_header(msg["Subject"])[0][0]
                     sender = decode_header(msg["From"])[0][0]
-
+                    # Korrekte Datums-Extraktion
+                    date_str = msg["Date"]
+                    # Optional: Konvertierung in datetime-Objekt
+                    date = email.utils.parsedate_to_datetime(date_str)
                     if isinstance(subject, bytes):
                         subject = subject.decode()
                     if isinstance(sender, bytes):
@@ -40,6 +43,7 @@ def fetch_emails(email_address, email_password, imap_server, page=0, page_size=2
                     emails.append({
                         "subject": subject,
                         "sender": sender,
+                        "date": date,
                         "message": msg
                     })
 
