@@ -60,8 +60,8 @@ def show_email_details(email_data):
         content = message.get_payload(decode=True).decode()
 
     # Zusammenfassung
-    #summary = summarize_email(content, openai_api_key)
-    summary = "not enabled!"
+    summary = summarize_email(content, openai_api_key)
+    #summary = "not enabled!"
 
     # Overlay anzeigen
     st.markdown(f"### 📜 Betreff: {email_data['subject']}")
