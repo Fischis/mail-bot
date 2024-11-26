@@ -12,12 +12,11 @@ st.title("🛩 E-Mail AI Demo ")
 # Model Dialog für API Key und E-Mail Zugangsdaten
 @st.dialog("🔑 Zugangsdaten Eingeben")
 def show_credentials_dialog():
-    print ("test")
     with st.form("credentials_form", clear_on_submit=False):
-        #st.header("🔑 Zugangsdaten eingeben")
+
         try:
             openai_api_key = st.secrets["openai_api_key"]
-        except:
+        except Exception as e:
             openai_api_key = st.text_input("OpenAI API Key", type="password")
         email_address = st.text_input("E-Mail-Adresse", placeholder="z.B. benutzer@web.de")
         email_password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
@@ -26,19 +25,20 @@ def show_credentials_dialog():
             st.session_state.openai_api_key = openai_api_key
             st.session_state.email_address = email_address
             st.session_state.email_password = email_password
-            try:
-                # E-Mails abrufen und in FAISS speichern
-                st.session_state.emails = fetch_emails(email_address, email_password, "imap.web.de")
-                st.session_state.current_page = 0
-                if st.session_state.emails:
-                    st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(st.session_state.emails, openai_api_key)
-                    if st.session_state.faiss_index:
-                        st.success("FAISS-Index erfolgreich erstellt.")
-                        st.session_state.show_dialog = False
-                        st.rerun()
-            except Exception as e:
-                st.error(f"Fehler beim Abrufen der E-Mails: {e}")
-                st.session_state.show_dialog = True
+            with st.spinner("E-Mails werden abgerufen und verarbeitet..."):
+                try:
+                    # E-Mails abrufen und in FAISS speichern
+                    st.session_state.emails = fetch_emails(email_address, email_password, "imap.web.de")
+                    st.session_state.current_page = 0
+                    if st.session_state.emails:
+                        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(st.session_state.emails, openai_api_key)
+                        if st.session_state.faiss_index:
+                            st.success("FAISS-Index erfolgreich erstellt.")
+                            st.session_state.show_dialog = False
+                            st.rerun()
+                except Exception as e:
+                    st.error(f"Fehler beim Abrufen der E-Mails: {e}")
+                    st.session_state.show_dialog = True
 
 
 
