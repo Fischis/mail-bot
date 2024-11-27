@@ -12,10 +12,12 @@ st.title("🛩 E-Mail AI Demo ")
 @st.dialog("🔑 Zugangsdaten Eingeben")
 def show_credentials_dialog():
     with st.form("credentials_form", clear_on_submit=False):
+       
         try:
             openai_api_key = st.secrets["openai_api_key"]
         except:
             openai_api_key = st.text_input("OpenAI API Key", type="password")
+        st.markdown ("Disclaimer: Zugangsdaten funktionieren nur mit web.de Konten. Auch wenn nichts geloggt, gecached oder gespeichert wird, findet die Verarbeitung auf einem Server bei streamlit in der Cloud statt. Bitte keine sensiblen Daten eingeben.")
         email_address = st.text_input("E-Mail-Adresse", placeholder="z.B. benutzer@web.de")
         email_password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
         submitted = st.form_submit_button("Speichern und Schließen")
@@ -58,12 +60,12 @@ def show_email_details(email_data):
     st.markdown(f"**Zusammenfassung:**\n{summary}")
     st.text_area("Inhalt der E-Mail", content, height=300)
 
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns([2, 1], vertical_alignment="bottom")
     with col1:
-        custom_keywords = st.text_input("Stichworte für Antwort", value="", placeholder="Bitte hier Stichworte eingeben")
+        custom_keywords = st.text_input("LLM Antwort support: ", value="", placeholder="Bitte hier Stichworte eingeben")
         suggested_response = ""
     with col2:
-        if st.button("Vorschlag für Antwort"):
+        if st.button("Vorschlag generieren"):
             suggested_response = llm_suggest_email_response(custom_keywords, content, openai_api_key)
     st.markdown(f"**Vorschlag für Antwort:**\n{suggested_response}")
 
@@ -181,12 +183,13 @@ def remove_search_tab(tab_title):
     st.rerun()
 
 # Suchfunktion in der Seitenleiste
-search_query = st.sidebar.text_input("🔍 Suche in E-Mails")
+search_query = st.sidebar.text_input("🔍 Suche in E-Mails", placeholder=st.session_state.last_search_query)
 search_button = st.sidebar.button("Suchen")
 
-if search_button and search_query:
-    if handle_search(search_query):
-        st.rerun()
+with st.spinner("Suche wird durchgeführt..."):
+    if search_button and search_query:
+        if handle_search(search_query):
+            st.rerun()
 
 # Tab-Titel erstellen
 tab_titles = ["📧 E-Mails"]
@@ -197,9 +200,10 @@ if st.session_state.search_active and st.session_state.search_results:
 
 # Aktiven Tab auswählen
 selected_tab = st.radio(
-    "Tabs",
+    "Tab auswählen",
     tab_titles,
-    index=tab_titles.index(st.session_state.active_tab)
+    index=tab_titles.index(st.session_state.active_tab),
+    horizontal=True
 )
 
 # Aktiven Tab in der Session State speichern
