@@ -2,21 +2,19 @@ import streamlit as st
 import openai
 import numpy as np
 from utils.fetch_emails import fetch_emails
-from utils.summarize_emails import summarize_email
-from utils.summarize_emails import llm_query_answer
+from utils.summarize_emails import summarize_email, llm_query_answer, llm_suggest_email_response
 from utils.faiss_utils import generate_faiss_index, search_faiss_index
 
 # App Titel
 st.title("🛩 E-Mail AI Demo ")
 
-# Model Dialog für API Key und E-Mail Zugangsdaten
+# Modell-Dialog für API Key und E-Mail Zugangsdaten
 @st.dialog("🔑 Zugangsdaten Eingeben")
 def show_credentials_dialog():
     with st.form("credentials_form", clear_on_submit=False):
-
         try:
             openai_api_key = st.secrets["openai_api_key"]
-        except Exception as e:
+        except:
             openai_api_key = st.text_input("OpenAI API Key", type="password")
         email_address = st.text_input("E-Mail-Adresse", placeholder="z.B. benutzer@web.de")
         email_password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
@@ -27,11 +25,11 @@ def show_credentials_dialog():
             st.session_state.email_password = email_password
             with st.spinner("E-Mails werden abgerufen und verarbeitet..."):
                 try:
-                    # E-Mails abrufen und in FAISS speichern
                     st.session_state.emails = fetch_emails(email_address, email_password, "imap.web.de")
                     st.session_state.current_page = 0
                     if st.session_state.emails:
-                        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(st.session_state.emails, openai_api_key)
+                        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(
+                            st.session_state.emails, openai_api_key)
                         if st.session_state.faiss_index:
                             st.success("FAISS-Index erfolgreich erstellt.")
                             st.session_state.show_dialog = False
@@ -39,14 +37,10 @@ def show_credentials_dialog():
                 except Exception as e:
                     st.error(f"Fehler beim Abrufen der E-Mails: {e}")
                     st.session_state.show_dialog = True
-
-
-
+    
 def show_email_details(email_data):
-#    email_data = st.session_state.selected_email
     message = email_data["message"]
-
-    # E-Mail-Inhalt dekodieren
+    content = ""
     if message.is_multipart():
         for part in message.walk():
             content_type = part.get_content_type()
@@ -58,20 +52,20 @@ def show_email_details(email_data):
                 pass
     else:
         content = message.get_payload(decode=True).decode()
-
-    # Zusammenfassung
     summary = summarize_email(content, openai_api_key)
-    #summary = "not enabled!"
-
-    # Overlay anzeigen
     st.markdown(f"### 📜 Betreff: {email_data['subject']}")
     st.markdown(f"**Von:** {email_data['sender']}")
     st.markdown(f"**Zusammenfassung:**\n{summary}")
     st.text_area("Inhalt der E-Mail", content, height=300)
-#        if st.button("Schließen"):
-#            st.session_state.selected_email = None
 
-
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        custom_keywords = st.text_input("Stichworte für Antwort", value="", placeholder="Bitte hier Stichworte eingeben")
+        suggested_response = ""
+    with col2:
+        if st.button("Vorschlag für Antwort"):
+            suggested_response = llm_suggest_email_response(custom_keywords, content, openai_api_key)
+    st.markdown(f"**Vorschlag für Antwort:**\n{suggested_response}")
 
 # Initialisiere Zugangsdaten
 if "show_dialog" not in st.session_state:
@@ -93,15 +87,13 @@ email_address = st.session_state.email_address
 email_password = st.session_state.email_password
 imap_server = "imap.web.de"
 
-# Seiten-Status
+# Seitenstatus
 if "details_visible" not in st.session_state:
     st.session_state.details_visible = -1
 if "emails" not in st.session_state:
     st.session_state.emails = []
 if "current_page" not in st.session_state:
     st.session_state.current_page = 0
-if "selected_email" not in st.session_state:
-    st.session_state.selected_email = None
 if "faiss_index" not in st.session_state:
     st.session_state.faiss_index = None
 if "email_vectors" not in st.session_state:
@@ -110,21 +102,15 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = []
 if "search_active" not in st.session_state:
     st.session_state.search_active = False
-if "search_tabs" not in st.session_state:
-    st.session_state.search_tabs = []
-
-if "search_results" not in st.session_state:
-    st.session_state.search_results = []
-if "search_active" not in st.session_state:
-    st.session_state.search_active = False
 if "last_search_query" not in st.session_state:
     st.session_state.last_search_query = ""
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "📧 E-Mails"
 
 def toggle_email_details(index, context="main"):
     detail_key = f"details_visible_{context}"
     if detail_key not in st.session_state:
         st.session_state[detail_key] = -1
-    
     if st.session_state[detail_key] == index:
         st.session_state[detail_key] = -1
     else:
@@ -139,16 +125,15 @@ def display_email_list(emails, context="main"):
             with col2:
                 st.markdown(f"**Betreff:** {email_data['subject']}")
             with col3:
-                st.markdown(f"**Von:** {email_data['sender']}")            
+                st.markdown(f"**Von:** {email_data['sender']}")
             detail_key = f"details_visible_{context}"
             button_text = "Details ausblenden" if st.session_state.get(detail_key) == i else "Details anzeigen"
             st.button(
-                button_text, 
+                button_text,
                 key=f"email_{context}_{i}",
                 on_click=toggle_email_details,
                 args=(i, context)
             )
-        
             if st.session_state.get(detail_key) == i:
                 show_email_details(email_data)
             st.markdown("---")
@@ -159,15 +144,13 @@ def handle_search(query):
             if st.session_state.faiss_index is None:
                 st.error("Bitte erst die E-Mails abrufen und den FAISS-Index erstellen.")
                 return False
-            
             search_results = search_faiss_index(
                 query,
                 st.session_state.faiss_index,
                 st.session_state.email_vectors,
                 st.session_state.openai_api_key
             )
-            llm_search_summary = llm_query_answer (query, search_results, st.session_state.openai_api_key)
-            
+            llm_search_summary = llm_query_answer(query, search_results, st.session_state.openai_api_key)
             if search_results:
                 st.session_state.search_results.append({
                     "query": query,
@@ -176,18 +159,28 @@ def handle_search(query):
                 })
                 st.session_state.search_active = True
                 st.session_state.last_search_query = query
+                st.session_state.active_tab = f"🔍 {query[:10]}..."
                 return True
         except Exception as e:
             st.error(f"Fehler bei der Suche: {e}")
     return False
 
-def remove_search_tab(index):
-    st.session_state.search_results.pop(index)
+def remove_search_tab(tab_title):
+    index = None
+    for i, result in enumerate(st.session_state.search_results):
+        if f"🔍 {result['query'][:10]}..." == tab_title:
+            index = i
+            break
+    if index is not None:
+        st.session_state.search_results.pop(index)
     if not st.session_state.search_results:
         st.session_state.search_active = False
+        st.session_state.active_tab = "📧 E-Mails"
+    else:
+        st.session_state.active_tab = "📧 E-Mails"
     st.rerun()
 
-# Search functionality in sidebar
+# Suchfunktion in der Seitenleiste
 search_query = st.sidebar.text_input("🔍 Suche in E-Mails")
 search_button = st.sidebar.button("Suchen")
 
@@ -195,28 +188,33 @@ if search_button and search_query:
     if handle_search(search_query):
         st.rerun()
 
-
-
-# Create main tabs with close buttons for search tabs
+# Tab-Titel erstellen
 tab_titles = ["📧 E-Mails"]
 if st.session_state.search_active and st.session_state.search_results:
-    # Create columns for each search tab to include close button
     for result in st.session_state.search_results:
         tab_title = f"🔍 {result['query'][:10]}..."
         tab_titles.append(tab_title)
 
-tabs = st.tabs(tab_titles)
+# Aktiven Tab auswählen
+selected_tab = st.radio(
+    "Tabs",
+    tab_titles,
+    index=tab_titles.index(st.session_state.active_tab)
+)
 
-# Main E-Mail tab
-with tabs[0]:
+# Aktiven Tab in der Session State speichern
+st.session_state.active_tab = selected_tab
+
+# Inhalt basierend auf dem aktiven Tab anzeigen
+if selected_tab == "📧 E-Mails":
     if st.session_state.emails:
         total_pages = (len(st.session_state.emails) + 19) // 20
         current_page_emails = st.session_state.emails[
-            st.session_state.current_page * 20 : (st.session_state.current_page + 1) * 20
+            st.session_state.current_page * 20: (st.session_state.current_page + 1) * 20
         ]
         display_email_list(current_page_emails, "main")
 
-        # Pagination Buttons
+        # Navigationsbuttons
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             if st.button("⬅️ Zurück", disabled=st.session_state.current_page <= 0, key="prev"):
@@ -224,17 +222,13 @@ with tabs[0]:
         with col3:
             if st.button("➡️ Weiter", disabled=st.session_state.current_page >= total_pages - 1, key="next"):
                 st.session_state.current_page += 1
-
-# Search result tabs
-if st.session_state.search_active and st.session_state.search_results:
-    for tab_idx, (tab, result) in enumerate(zip(tabs[1:], st.session_state.search_results), 1):
-        with tab:
-            # Add close button at the top of each search tab
-            col1, col2 = st.columns([20, 1])
-            with col2:
-                if st.button("✖️", key=f"close_tab_{tab_idx}", help="Tab schließen"):
-                    remove_search_tab(tab_idx - 1)
-            
-            st.markdown("### 🔍 Suchergebnisse")
-            st.markdown(f"LLM Antwort: {result['llm_summary']}")
-            display_email_list(result["results"], f"search_{result['query']}")
+else:
+    # Suchergebnisse anzeigen
+    index = tab_titles.index(selected_tab) - 1
+    result = st.session_state.search_results[index]
+    # Schließen-Button
+    if st.button("✖️ Tab schließen"):
+        remove_search_tab(selected_tab)
+    st.markdown("### 🔍 Suchergebnisse")
+    st.markdown(f"LLM Antwort: {result['llm_summary']}")
+    display_email_list(result["results"], f"search_{result['query']}")

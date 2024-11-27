@@ -1,5 +1,6 @@
 import openai
 import streamlit as st
+from typing import Optional
 
 def summarize_email(content, openai_api_key):
     try:
@@ -89,3 +90,45 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
 
     except Exception as e:
         return f"Fehler bei der Zusammenfassung: {str(e)}"
+    
+
+  
+
+def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str], openai_api_key) -> str:
+    """
+    Generate a response to an email based on the email body using OpenAI.
+    
+    Args:
+        email_body: The email body text.
+        suggest_keywords: Keywords to suggest in the response.
+    
+    Returns:
+        Generated response to the email.
+    """
+    try:
+        client = openai.OpenAI(api_key=openai_api_key)
+        
+        if suggest_keywords:
+            user_message = (
+                f"{email_body}\n\n"
+                f"Bitte berücksichtige die folgenden Schlüsselwörter in deiner Antwort: {suggest_keywords}"
+            )
+        else:
+            user_message = email_body
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Du bist ein hilfreicher Assistent, der E-Mails im Namen des Empfängers beantwortet."
+                },
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=350,
+            temperature=0.7,
+            response_format={"type": "text"}
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Fehler bei der KI-Antwort: {e}"
