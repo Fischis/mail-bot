@@ -2,6 +2,11 @@ import openai
 import streamlit as st
 from typing import Optional
 
+
+def get_openai_model():
+    """Get the selected OpenAI model from session state or set default"""
+    return st.session_state.openai_model #todo cleanup dependency to session state
+
 def summarize_email(content, openai_api_key):
     try:
         if not openai_api_key or not openai_api_key.startswith("sk-"):
@@ -9,13 +14,13 @@ def summarize_email(content, openai_api_key):
         
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=get_openai_model(),
             messages=[
                 {"role": "system", "content": "Du bist ein Assistent, der E-Mails zusammenfasst."},
                 {"role": "user", "content": f"Fasse die folgende E-Mail kurz und prägnant zusammen:\n\n{content}"}
             ],
             max_tokens=150,
-            temperature=0.7,
+            temperature=0.3,
             response_format={"type": "text"}
         )
         return response.choices[0].message.content.strip()
@@ -34,8 +39,6 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
     Returns:
         str: Generated summary of the search results
     """
-
-
 
     try:
         # Prepare the email content for the prompt
@@ -66,24 +69,24 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
 
         # Create the prompt for OpenAI
         prompt = f"""
-        Suche: {query}
+        Sucheanfrage: {query}
         
         Gefundene E-Mails:
         {'***'.join(email_contents)}
         
         Bitte fasse die wichtigsten Informationen aus den gefundenen E-Mails zusammen, 
-        die relevant für die Suchanfrage sind.
+        die relevant für die Suchanfrage sind. Bevorzuge Informationen aus Mail welche neueren Datums sind.
         """
 
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=get_openai_model(),
             messages=[
-                {"role": "system", "content": "Du bist ein hilfreicher Assistent, der E-Mails analysiert."},
+                {"role": "system", "content": "Du bist ein hilfreicher Assistent, der E-Mails durchsucht und die Suchanfrage möglichst mit Informationen aus den E-Mails beantwortet."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=500,
-            temperature=0.7,
+            temperature=0.3,
             response_format={"type": "text"}
         )
         return response.choices[0].message.content.strip()
@@ -91,8 +94,6 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
     except Exception as e:
         return f"Fehler bei der Zusammenfassung: {str(e)}"
     
-
-  
 
 def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str], openai_api_key) -> str:
     """
@@ -117,7 +118,7 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
             user_message = email_body
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=get_openai_model(),
             messages=[
                 {
                     "role": "system",

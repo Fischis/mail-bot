@@ -108,6 +108,10 @@ if "last_search_query" not in st.session_state:
     st.session_state.last_search_query = ""
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = "📧 E-Mails"
+if 'openai_model' not in st.session_state:
+    st.session_state.openai_model = "gpt-4o-mini"
+
+
 
 def toggle_email_details(index, context="main"):
     detail_key = f"details_visible_{context}"
@@ -190,6 +194,19 @@ with st.spinner("Suche wird durchgeführt..."):
     if search_button and search_query:
         if handle_search(search_query):
             st.rerun()
+
+
+
+
+"""Setup the model selector in the sidebar"""
+models = ["gpt-4-turbo-preview", "gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"] 
+st.sidebar.selectbox(
+    "Verwendetes Modell:",
+    models,
+    key='openai_model'
+)
+
+
 
 # Tab-Titel erstellen
 tab_titles = ["📧 E-Mails"]
