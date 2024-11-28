@@ -108,8 +108,7 @@ if "last_search_query" not in st.session_state:
     st.session_state.last_search_query = ""
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = "📧 E-Mails"
-if 'openai_model' not in st.session_state:
-    st.session_state.openai_model = "gpt-4o-mini"
+
 
 
 
@@ -198,13 +197,24 @@ with st.spinner("Suche wird durchgeführt..."):
 
 
 
-"""Setup the model selector in the sidebar"""
-models = ["gpt-4-turbo-preview", "gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"] 
-st.sidebar.selectbox(
+# Ersetze den bestehenden Modell-Selector Code mit:
+
+models = ["gpt-4o-mini", "gpt-4-1106-preview", "gpt-4", "gpt-3.5-turbo"]
+
+# Initialisiere openai_model im Session State falls nicht vorhanden
+if 'openai_model' not in st.session_state:
+    st.session_state.openai_model = models[0]
+
+# Zeige Selectbox mit currently selected model
+selected_model = st.sidebar.selectbox(
     "Verwendetes Modell:",
     models,
-    key='openai_model'
+    index=models.index(st.session_state.openai_model)
 )
+
+# Update session state wenn sich die Auswahl ändert
+if selected_model != st.session_state.openai_model:
+    st.session_state.openai_model = selected_model
 
 
 
