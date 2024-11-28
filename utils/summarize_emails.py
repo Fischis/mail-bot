@@ -9,7 +9,7 @@ def summarize_email(content, openai_api_key):
         
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Du bist ein Assistent, der E-Mails zusammenfasst."},
                 {"role": "user", "content": f"Fasse die folgende E-Mail kurz und prägnant zusammen:\n\n{content}"}
@@ -77,7 +77,7 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
 
         client = openai.OpenAI(api_key=openai_api_key)
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "Du bist ein hilfreicher Assistent, der E-Mails analysiert."},
                 {"role": "user", "content": prompt}
@@ -117,7 +117,7 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
             user_message = email_body
         
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
