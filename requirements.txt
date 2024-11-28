@@ -1,3 +1,4 @@
+gotrue==2.8.1
 streamlit
 openai
 langchain
