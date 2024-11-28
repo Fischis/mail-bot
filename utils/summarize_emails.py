@@ -117,7 +117,7 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
             user_message = email_body
         
         response = client.chat.completions.create(
-            model="gpt-4-1106-preview"
+            model="gpt-4-1106-preview",
             messages=[
                 {
                     "role": "system",
