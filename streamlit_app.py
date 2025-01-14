@@ -199,7 +199,7 @@ with st.spinner("Suche wird durchgeführt..."):
 
 # Ersetze den bestehenden Modell-Selector Code mit:
 
-models = ["gpt-4o-mini", "gpt-4-1106-preview", "gpt-4", "gpt-3.5-turbo"]
+models = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
 
 # Initialisiere openai_model im Session State falls nicht vorhanden
 if 'openai_model' not in st.session_state:
