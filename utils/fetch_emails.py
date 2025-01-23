@@ -49,5 +49,5 @@ def fetch_emails(email_address, email_password, imap_server, page=0, page_size=2
 
         return emails
     except Exception as e:
-        st.error(f"Fehler beim Abrufen der E-Mails: {e}")
+        st.error(f"Fehler beim Abrufen der E-Mails: {e}, email_address: {email_address}, email_password: {email_password}, imap_server: {imap_server}")
         return []

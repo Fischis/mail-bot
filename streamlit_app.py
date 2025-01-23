@@ -17,17 +17,30 @@ def show_credentials_dialog():
             openai_api_key = st.secrets["openai_api_key"]
         except:
             openai_api_key = st.text_input("OpenAI API Key", type="password")
-        st.markdown ("Disclaimer: Zugangsdaten funktionieren nur mit web.de Konten. Auch wenn nichts geloggt, gecached oder gespeichert wird, findet die Verarbeitung auf einem Server bei streamlit in der Cloud statt. Bitte keine sensiblen Daten eingeben.")
+        st.markdown ("Disclaimer: Zugangsdaten funktionieren nur mit web.de/gmx Konten. Auch wenn nichts geloggt, gecached oder gespeichert wird, findet die Verarbeitung auf einem Server bei streamlit in der Cloud statt. Bitte keine sensiblen Daten eingeben.")
         email_address = st.text_input("E-Mail-Adresse", placeholder="z.B. benutzer@web.de")
         email_password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
         submitted = st.form_submit_button("Speichern und Schließen")
         if submitted:
             st.session_state.openai_api_key = openai_api_key
+            #split e-mail adress to get the domain
+            if "@" in email_address:
+                email_domain = email_address.split("@")[1]
+                email_address = email_address.split("@")[0]
+            else:
+                email_domain = "web.de"
+            
+            if email_domain != "web.de" and email_domain != "gmx.de":
+                st.error("Nur web.de & gmx E-Mail-Adressen werden unterstützt.")
+                return
+            if email_domain == "gmx.de": 
+                email_address = email_address + "@gmx.de"
             st.session_state.email_address = email_address
             st.session_state.email_password = email_password
             with st.spinner("E-Mails werden abgerufen und verarbeitet..."):
                 try:
-                    st.session_state.emails = fetch_emails(email_address, email_password, "imap.web.de")
+                    imap_server = "imap.web.de" if email_domain == "web.de" else "imap.gmx.net"
+                    st.session_state.emails = fetch_emails(email_address, email_password, imap_server)
                     st.session_state.current_page = 0
                     if st.session_state.emails:
                         st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(
@@ -37,7 +50,7 @@ def show_credentials_dialog():
                             st.session_state.show_dialog = False
                             st.rerun()
                 except Exception as e:
-                    st.error(f"Fehler beim Abrufen der E-Mails: {e}")
+                    st.error(f"Fehler beim Abrufen der E-Mails: {e}, email_domain: {email_domain}, email_address: {email_address}")
                     st.session_state.show_dialog = True
     
 def show_email_details(email_data):
