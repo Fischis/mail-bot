@@ -95,7 +95,7 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
         return f"Fehler bei der Zusammenfassung: {str(e)}"
     
 
-def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str], openai_api_key) -> str:
+def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str], dst_language, openai_api_key) -> str:
     """
     Generate a response to an email based on the email body using OpenAI.
     
@@ -113,6 +113,7 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
             user_message = (
                 f"{email_body}\n\n"
                 f"Bitte berücksichtige die folgenden Schlüsselwörter in deiner Antwort: {suggest_keywords}"
+                f"\n Bitte übersetze die Antwort in die Sprache: {dst_language}"
             )
         else:
             user_message = email_body

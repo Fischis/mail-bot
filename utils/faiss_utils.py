@@ -2,6 +2,7 @@ import openai
 import faiss
 import numpy as np
 import streamlit as st
+import logging  # Hinzufügen des Imports für das logging-Modul
 
 
 def generate_faiss_index(emails, openai_api_key):

@@ -75,13 +75,18 @@ def show_email_details(email_data):
     st.markdown(f"**Zusammenfassung:**\n{summary}")
     st.text_area("Inhalt der E-Mail", content, height=300)
 
-    col1, col2 = st.columns([2, 1], vertical_alignment="bottom")
+    col1, col2, col3 = st.columns([3, 1,1], vertical_alignment="bottom")
     with col1:
         custom_keywords = st.text_input("LLM Antwort support: ", value="", placeholder="Bitte hier Stichworte eingeben")
         suggested_response = ""
     with col2:
+        dst_language = st.selectbox("Zielsprache", ["Deutsch", "Englisch", "Spanisch", "Französisch"])
+    with col3:
         if st.button("Vorschlag generieren"):
-            suggested_response = llm_suggest_email_response(custom_keywords, content, openai_api_key)
+            #add language selection for the response
+            suggested_response = llm_suggest_email_response(content, custom_keywords, dst_language, openai_api_key)
+        
+        
     st.markdown(f"**Vorschlag für Antwort:**\n{suggested_response}")
 
 # Initialisiere Zugangsdaten
