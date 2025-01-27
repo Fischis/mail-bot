@@ -3,6 +3,7 @@ import faiss
 import numpy as np
 import streamlit as st
 
+
 def generate_faiss_index(emails, openai_api_key):
     try:
         if not openai_api_key or not openai_api_key.startswith("sk-"):
@@ -24,6 +25,15 @@ def generate_faiss_index(emails, openai_api_key):
                         pass
             else:
                 content = message.get_payload(decode=True).decode()
+            
+            #shortcut - only use first 6000 tokens of the email to avoid problems with the teext-embedding-ada-002 model input limit
+            #for a more robust solution, you could split the email into chunks and generate embeddings for each chunk
+            #to simplify calculation we use 4 characters per token
+            if len(content) > 6000*4:
+                content = content[:6000*4]
+                logging.info(f"Email too long, truncated to {len(content)} characters")
+                
+              
             
             # Generieren des Embeddings mit den neuen Parametern
             response = client.embeddings.create(

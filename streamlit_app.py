@@ -17,6 +17,7 @@ def show_credentials_dialog():
             openai_api_key = st.secrets["openai_api_key"]
         except:
             openai_api_key = st.text_input("OpenAI API Key", type="password")
+        
         st.markdown ("Disclaimer: Zugangsdaten funktionieren nur mit web.de/gmx Konten. Auch wenn nichts geloggt, gecached oder gespeichert wird, findet die Verarbeitung auf einem Server bei streamlit in der Cloud statt. Bitte keine sensiblen Daten eingeben.")
         email_address = st.text_input("E-Mail-Adresse", placeholder="z.B. benutzer@web.de")
         email_password = st.text_input("Passwort", type="password", placeholder="Dein Passwort")
@@ -40,11 +41,12 @@ def show_credentials_dialog():
             with st.spinner("E-Mails werden abgerufen und verarbeitet..."):
                 try:
                     imap_server = "imap.web.de" if email_domain == "web.de" else "imap.gmx.net"
-                    st.session_state.emails = fetch_emails(email_address, email_password, imap_server)
+                    st.session_state.emails = fetch_emails(email_address, email_password, imap_server, 0, 50)
                     st.session_state.current_page = 0
+                    #order emails from newest to latest:
+                    st.session_state.emails = sorted(st.session_state.emails, key=lambda x: x["date"], reverse=True)
                     if st.session_state.emails:
-                        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(
-                            st.session_state.emails, openai_api_key)
+                        st.session_state.faiss_index, st.session_state.email_vectors = generate_faiss_index(st.session_state.emails, openai_api_key)
                         if st.session_state.faiss_index:
                             st.success("FAISS-Index erfolgreich erstellt.")
                             st.session_state.show_dialog = False
@@ -263,9 +265,11 @@ if selected_tab == "📧 E-Mails":
         with col1:
             if st.button("⬅️ Zurück", disabled=st.session_state.current_page <= 0, key="prev"):
                 st.session_state.current_page -= 1
+                st.rerun()
         with col3:
             if st.button("➡️ Weiter", disabled=st.session_state.current_page >= total_pages - 1, key="next"):
                 st.session_state.current_page += 1
+                st.rerun()
 else:
     # Suchergebnisse anzeigen
     index = tab_titles.index(selected_tab) - 1
