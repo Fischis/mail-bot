@@ -75,7 +75,7 @@ def llm_query_answer(query: str, search_results: list, openai_api_key) -> str:
         {'***'.join(email_contents)}
         
         Bitte fasse die wichtigsten Informationen aus den gefundenen E-Mails zusammen, 
-        die relevant für die Suchanfrage sind. Bevorzuge Informationen aus Mail welche neueren Datums sind.
+        die relevant für die Suchanfrage sind. Bevorzuge Informationen aus Mails welche neueren Datums sind.
         """
 
         client = openai.OpenAI(api_key=openai_api_key)
@@ -104,7 +104,7 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
         suggest_keywords: Keywords to suggest in the response.
     
     Returns:
-        Generated response to the email.
+        Generated response to the email default in german language.
     """
     try:
         client = openai.OpenAI(api_key=openai_api_key)
@@ -113,17 +113,21 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
             user_message = (
                 f"{email_body}\n\n"
                 f"Bitte berücksichtige die folgenden Schlüsselwörter in deiner Antwort: {suggest_keywords}"
-                f"\n Bitte übersetze die Antwort in die Sprache: {dst_language}"
             )
         else:
             user_message = email_body
-        
-        response = client.chat.completions.create(
+
+
+        system_message = "Du bist ein hilfreicher Assistent, der E-Mails im Namen des Empfängers beantwortet."
+        if (dst_language != "Deutsch"):
+            system_message+=f"\n Füge einen weiteren Absatz mit einer Übersetzung in  {dst_language} hinzu."
+            
+        response = client.chat.completions.create (
             model=get_openai_model(),
             messages=[
                 {
                     "role": "system",
-                    "content": "Du bist ein hilfreicher Assistent, der E-Mails im Namen des Empfängers beantwortet."
+                    "content": system_message
                 },
                 {"role": "user", "content": user_message}
             ],
@@ -134,3 +138,32 @@ def llm_suggest_email_response(email_body: str, suggest_keywords: Optional[str],
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Fehler bei der KI-Antwort: {e}"
+
+def llm_translate_text(text: str, dst_language: str, openai_api_key) -> str:
+    """
+    Translate text from source language to destination language using OpenAI.
+
+    Args:
+        text: The text to translate.
+        src_language: The source language of the text.
+        dst_language: The destination language to translate the text to.
+
+    Returns:
+        str: Translated text.
+    """ 
+    try:
+        client = openai.OpenAI(api_key = openai_api_key)
+        response = client.chat.completions.create(
+            model=get_openai_model(),
+            messages=[
+                {"role": "system", "content": f"Du bist ein Assistent, der Texte nach {dst_language} übersetzt."},
+                {"role": "user", "content": text}   
+            ],
+            max_tokens=150,
+            temperature=0.3,
+            response_format={"type": "text"}
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Fehler bei der KI-Übersetzung: {e}"
+

@@ -2,8 +2,24 @@ import streamlit as st
 import openai
 import numpy as np
 from utils.fetch_emails import fetch_emails
-from utils.summarize_emails import summarize_email, llm_query_answer, llm_suggest_email_response
+from utils.summarize_emails import summarize_email, llm_query_answer, llm_suggest_email_response, llm_translate_text
 from utils.faiss_utils import generate_faiss_index, search_faiss_index
+
+custom_css = """
+<style>
+.custom-container {
+    background-color: #f0f2f6; /* Light grey background */
+    padding: 15px; /* Add some padding */
+    border-radius: 10px; /* Rounded corners */
+}
+.highlight-section {
+    background-color: #ffcccb; /* Light red background for highlight */
+    padding: 10px;
+    border-radius: 5px;
+}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # App Titel
 st.title("🛩 E-Mail AI Demo ")
@@ -55,7 +71,15 @@ def show_credentials_dialog():
                     st.error(f"Fehler beim Abrufen der E-Mails: {e}, email_domain: {email_domain}, email_address: {email_address}")
                     st.session_state.show_dialog = True
     
+@st.dialog("📧 Orginal E-Mail ")
+def show_email_content_dialog(email_data):
+    st.text_area("Inhalt der E-Mail", email_data, height=300)
+    if st.button("Schließen"):
+        st.rerun()
+
+
 def show_email_details(email_data):
+
     message = email_data["message"]
     content = ""
     if message.is_multipart():
@@ -69,25 +93,43 @@ def show_email_details(email_data):
                 pass
     else:
         content = message.get_payload(decode=True).decode()
+
+    #st.markdown('<div class="highlight-section">', unsafe_allow_html=True)    
     summary = summarize_email(content, openai_api_key)
     st.markdown(f"### 📜 Betreff: {email_data['subject']}")
     st.markdown(f"**Von:** {email_data['sender']}")
     st.markdown(f"**Zusammenfassung:**\n{summary}")
-    st.text_area("Inhalt der E-Mail", content, height=300)
+    st.markdown("---")
 
-    col1, col2, col3 = st.columns([3, 1,1], vertical_alignment="bottom")
+    #show content of e-mail in selected language
+    #add language selection for the response
+    col1, col3, col2 = st.columns([1, 3, 1], vertical_alignment="bottom")
+
+    with col2:
+        email_content_dst_language = st.selectbox("Sprache", ["Deutsch", "Englisch", "Spanisch", "Französisch"])
     with col1:
+        if st.button("Mail anzeigen"):
+            if email_content_dst_language != "Deutsch":
+                content = llm_translate_text(content, email_content_dst_language, openai_api_key)
+            show_email_content_dialog(content)
+    
+    st.markdown("---")
+
+    col1, col2, col3 = st.columns([1, 3,1], vertical_alignment="bottom")
+    with col2:
         custom_keywords = st.text_input("LLM Antwort support: ", value="", placeholder="Bitte hier Stichworte eingeben")
         suggested_response = ""
-    with col2:
-        dst_language = st.selectbox("Zielsprache", ["Deutsch", "Englisch", "Spanisch", "Französisch"])
     with col3:
-        if st.button("Vorschlag generieren"):
+        dst_language = st.selectbox("Zielsprache", ["Deutsch", "Englisch", "Spanisch", "Französisch"])
+    with col1:
+        if st.button("Antworten"):
             #add language selection for the response
             suggested_response = llm_suggest_email_response(content, custom_keywords, dst_language, openai_api_key)
         
         
     st.markdown(f"**Vorschlag für Antwort:**\n{suggested_response}")
+    #st.markdown('</div>', unsafe_allow_html=True)
+
 
 # Initialisiere Zugangsdaten
 if "show_dialog" not in st.session_state:
@@ -161,6 +203,8 @@ def display_email_list(emails, context="main"):
             )
             if st.session_state.get(detail_key) == i:
                 show_email_details(email_data)
+                
+
             st.markdown("---")
 
 def handle_search(query):
@@ -213,8 +257,6 @@ with st.spinner("Suche wird durchgeführt..."):
     if search_button and search_query:
         if handle_search(search_query):
             st.rerun()
-
-
 
 
 # Ersetze den bestehenden Modell-Selector Code mit:
